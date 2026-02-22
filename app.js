@@ -3,13 +3,16 @@ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.
 let device = null;
 let transport = null;
 let espLoader = null;
-let firmwareData = null;
+
+const files = {
+  bootloader: { address: 0x0,     data: null, inputId: "fileBootloader", nameId: "nameBootloader" },
+  partitions:  { address: 0x8000,  data: null, inputId: "filePartitions",  nameId: "namePartitions"  },
+  firmware:    { address: 0x10000, data: null, inputId: "fileFirmware",    nameId: "nameFirmware"    },
+};
 
 const connectBtn    = document.getElementById("connectBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const flashBtn      = document.getElementById("flashBtn");
-const firmwareInput = document.getElementById("firmware");
-const fileNameEl    = document.getElementById("fileName");
 const statusBadge   = document.getElementById("statusBadge");
 const progressWrap  = document.getElementById("progressWrap");
 const progressBar   = document.getElementById("progressBar");
@@ -29,6 +32,40 @@ function setStep(step, state) {
   if (state) el.classList.add(state);
 }
 
+async function readFileAsBinaryString(file) {
+  const ab = await file.arrayBuffer();
+  const bytes = new Uint8Array(ab);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return binary;
+}
+
+// Setup file inputs
+for (const [key, f] of Object.entries(files)) {
+  const input = document.getElementById(f.inputId);
+  const nameEl = document.getElementById(f.nameId);
+  input.addEventListener("change", async () => {
+    const file = input.files[0];
+    if (!file) return;
+    f.data = await readFileAsBinaryString(file);
+    nameEl.textContent = "✅ " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
+    nameEl.className = "file-name loaded";
+    log("Chargé [0x" + f.address.toString(16) + "] : " + file.name, "success");
+    updateFlashBtn();
+    if (allFilesLoaded()) setStep("File", "done");
+  });
+}
+
+function allFilesLoaded() {
+  return Object.values(files).every(f => f.data !== null);
+}
+
+function updateFlashBtn() {
+  flashBtn.disabled = !(espLoader && allFilesLoaded());
+}
+
 connectBtn.addEventListener("click", async () => {
   if (!("serial" in navigator)) {
     log("Web Serial API non supportée. Utilise Chrome ou Edge.", "error");
@@ -37,7 +74,7 @@ connectBtn.addEventListener("click", async () => {
   try {
     device = await navigator.serial.requestPort();
     transport = new Transport(device, true);
-    const loaderOptions = {
+    espLoader = new ESPLoader({
       transport,
       baudrate: 115200,
       terminal: {
@@ -45,10 +82,8 @@ connectBtn.addEventListener("click", async () => {
         writeLine: (data) => log(data, "info"),
         write:     (data) => log(data, "info"),
       },
-      enableTracing: false,
-    };
+    });
     log("Connexion en cours...", "info");
-    espLoader = new ESPLoader(loaderOptions);
     await espLoader.main();
     const chipName = espLoader.chip.CHIP_NAME;
     log("Connecté ! Puce détectée : " + chipName, "success");
@@ -78,31 +113,8 @@ disconnectBtn.addEventListener("click", async () => {
   log("Déconnecté.", "info");
 });
 
-firmwareInput.addEventListener("change", async () => {
-  const file = firmwareInput.files[0];
-  if (!file) return;
-  const ab = await file.arrayBuffer();
-  // esptool-js 0.4.3 attend une binary string dans fileArray[].data
-  const bytes = new Uint8Array(ab);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  firmwareData = binary;
-  fileNameEl.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
-  fileNameEl.className = "file-name loaded";
-  log("Fichier chargé : " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)", "success");
-  if (espLoader) setStep("File", "done");
-  setStep("Flash", "active");
-  updateFlashBtn();
-});
-
-function updateFlashBtn() {
-  flashBtn.disabled = !(espLoader && firmwareData);
-}
-
 flashBtn.addEventListener("click", async () => {
-  if (!espLoader || !firmwareData) return;
+  if (!espLoader || !allFilesLoaded()) return;
   flashBtn.disabled = true;
   connectBtn.disabled = true;
   progressWrap.classList.add("visible");
@@ -111,8 +123,12 @@ flashBtn.addEventListener("click", async () => {
   log("Démarrage du flash...", "info");
   try {
     await espLoader.flashId();
-    const flashOptions = {
-      fileArray: [{ data: firmwareData, address: 0x0 }],
+    const fileArray = Object.values(files).map(f => ({
+      data: f.data,
+      address: f.address,
+    }));
+    await espLoader.writeFlash({
+      fileArray,
       flashSize: "keep",
       flashMode: "keep",
       flashFreq: "keep",
@@ -121,11 +137,11 @@ flashBtn.addEventListener("click", async () => {
       reportProgress: (fileIndex, written, total) => {
         const pct = Math.round((written / total) * 100);
         progressBar.style.width = pct + "%";
-        if (pct % 10 === 0) log("Progression : " + pct + "%", "info");
+        const names = ["Bootloader", "Partitions", "Firmware"];
+        if (pct % 20 === 0) log(names[fileIndex] + " : " + pct + "%", "info");
       },
       calculateMD5Hash: undefined,
-    };
-    await espLoader.writeFlash(flashOptions);
+    });
     progressBar.style.width = "100%";
     progressBar.classList.add("done");
     log("Flash terminé avec succès ! Redémarre ton ESP32. ✅", "success");
