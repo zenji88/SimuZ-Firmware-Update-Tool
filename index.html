@@ -38,25 +38,39 @@
         <h2>Charger les fichiers</h2>
       </div>
 
-      <div class="file-row">
-        <span class="file-tag">0x0000</span>
-        <label class="file-label" for="fileBootloader">📂 Bootloader (.bin)</label>
-        <input type="file" id="fileBootloader" accept=".bin" />
-        <p class="file-name" id="nameBootloader">Aucun fichier</p>
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" id="tabBundle" onclick="switchTab('bundle')">📦 Bundle .zip</button>
+        <button class="tab" id="tabManual" onclick="switchTab('manual')">🗂️ 3 fichiers</button>
       </div>
 
-      <div class="file-row">
-        <span class="file-tag">0x8000</span>
-        <label class="file-label" for="filePartitions">📂 Partitions (.bin)</label>
-        <input type="file" id="filePartitions" accept=".bin" />
-        <p class="file-name" id="namePartitions">Aucun fichier</p>
+      <!-- Bundle mode -->
+      <div id="modeBundle">
+        <label class="file-label" for="fileBundle">📂 Choisir un fichier .zip</label>
+        <input type="file" id="fileBundle" accept=".zip" />
+        <div id="bundleStatus" class="bundle-status"></div>
       </div>
 
-      <div class="file-row">
-        <span class="file-tag">0x10000</span>
-        <label class="file-label" for="fileFirmware">📂 Firmware (.bin)</label>
-        <input type="file" id="fileFirmware" accept=".bin" />
-        <p class="file-name" id="nameFirmware">Aucun fichier</p>
+      <!-- Manual mode -->
+      <div id="modeManual" style="display:none;">
+        <div class="file-row">
+          <span class="file-tag">0x0000</span>
+          <label class="file-label" for="fileBootloader">📂 Bootloader (.bin)</label>
+          <input type="file" id="fileBootloader" accept=".bin" />
+          <p class="file-name" id="nameBootloader">Aucun fichier</p>
+        </div>
+        <div class="file-row">
+          <span class="file-tag">0x8000</span>
+          <label class="file-label" for="filePartitions">📂 Partitions (.bin)</label>
+          <input type="file" id="filePartitions" accept=".bin" />
+          <p class="file-name" id="namePartitions">Aucun fichier</p>
+        </div>
+        <div class="file-row">
+          <span class="file-tag">0x10000</span>
+          <label class="file-label" for="fileFirmware">📂 Firmware (.bin)</label>
+          <input type="file" id="fileFirmware" accept=".bin" />
+          <p class="file-name" id="nameFirmware">Aucun fichier</p>
+        </div>
       </div>
     </div>
 
@@ -81,13 +95,16 @@
 
 </div>
 
-<!-- Buffer polyfill for esptool-js in browser -->
+<!-- Buffer polyfill -->
 <script src="https://bundle.run/buffer@6.0.3"></script>
 <script>
   if (typeof window.Buffer === 'undefined') {
     window.Buffer = buffer.Buffer;
   }
 </script>
+
+<!-- JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script type="module" src="app.js"></script>
 </body>
