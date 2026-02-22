@@ -1,4 +1,4 @@
-{ box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f1117; color: #e0e0e0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 16px; }
 .container { background: #1a1d27; border: 1px solid #2e3147; border-radius: 16px; padding: 40px; width: 100%; max-width: 620px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
@@ -23,7 +23,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .btn-danger { background: #ef4444; color: white; }
 .file-label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #2e3147; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #e0e0e0; transition: background 0.2s; }
 .file-label:hover { background: #3a3f5c; }
-#firmware { display: none; }
+input[type="file"] { display: none; }
 .file-name { margin-top: 8px; font-size: 0.82rem; color: #6b7280; }
 .file-name.loaded { color: #22c55e; }
 .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 10px; border-radius: 20px; margin-left: auto; }
@@ -40,3 +40,17 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .footer { margin-top: 24px; text-align: center; font-size: 0.78rem; color: #374151; }
 .file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .file-tag { background: #2e3147; color: #60a5fa; font-family: monospace; font-size: 0.82rem; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
+
+/* Tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab { padding: 8px 18px; border-radius: 8px; border: 1px solid #2e3147; background: #12151f; color: #6b7280; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.tab:hover { border-color: #4f6ef7; color: #e0e0e0; }
+.tab.active { background: #4f6ef7; border-color: #4f6ef7; color: white; }
+
+/* Bundle status */
+.bundle-status { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.bundle-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.bundle-item .badge { font-family: monospace; background: #2e3147; color: #60a5fa; padding: 2px 7px; border-radius: 5px; font-size: 0.78rem; }
+.bundle-item .check { color: #6b7280; }
+.bundle-item.ok .check { color: #22c55e; }
+.bundle-item.error .check { color: #ef4444; }
