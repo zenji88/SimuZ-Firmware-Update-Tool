@@ -50,7 +50,7 @@ connectBtn.addEventListener("click", async () => {
     log("Connexion en cours...", "info");
     espLoader = new ESPLoader(loaderOptions);
     await espLoader.main();
-    const chipName = await espLoader.get_chip_description();
+    const chipName = espLoader.chip.CHIP_NAME;
     log("Connecté ! Puce détectée : " + chipName, "success");
     statusBadge.textContent = "✅ " + chipName;
     statusBadge.className = "status-badge connected";
