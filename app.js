@@ -51,8 +51,8 @@ connectBtn.addEventListener("click", async () => {
     espLoader = new ESPLoader(loaderOptions);
     await espLoader.main();
     const chipName = await espLoader.get_chip_description();
-    log(`Connecté ! Puce détectée : ${chipName}`, "success");
-    statusBadge.textContent = `✅ ${chipName}`;
+    log("Connecté ! Puce détectée : " + chipName, "success");
+    statusBadge.textContent = "✅ " + chipName;
     statusBadge.className = "status-badge connected";
     connectBtn.disabled = true;
     disconnectBtn.disabled = false;
@@ -60,7 +60,7 @@ connectBtn.addEventListener("click", async () => {
     setStep("File", "active");
     updateFlashBtn();
   } catch (err) {
-    log(`Erreur de connexion : ${err.message}`, "error");
+    log("Erreur de connexion : " + err.message, "error");
   }
 });
 
@@ -81,14 +81,14 @@ disconnectBtn.addEventListener("click", async () => {
 firmwareInput.addEventListener("change", async () => {
   const file = firmwareInput.files[0];
   if (!file) return;
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
+  const ab = await file.arrayBuffer();
+  const bytes = new Uint8Array(ab);
   let binary = "";
   bytes.forEach((b) => (binary += String.fromCharCode(b)));
   firmwareData = binary;
-  fileNameEl.textContent = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  fileNameEl.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
   fileNameEl.className = "file-name loaded";
-  log(`Fichier chargé : ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, "success");
+  log("Fichier chargé : " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)", "success");
   if (espLoader) setStep("File", "done");
   setStep("Flash", "active");
   updateFlashBtn();
@@ -107,7 +107,8 @@ flashBtn.addEventListener("click", async () => {
   progressBar.classList.remove("done");
   log("Démarrage du flash...", "info");
   try {
-    await espLoader.write_flash({
+    await espLoader.flash_id();
+    const flashOptions = {
       fileArray: [{ data: firmwareData, address: 0x1000 }],
       flashSize: "keep",
       flashMode: "keep",
@@ -116,16 +117,18 @@ flashBtn.addEventListener("click", async () => {
       compress: true,
       reportProgress: (fileIndex, written, total) => {
         const pct = Math.round((written / total) * 100);
-        progressBar.style.width = `${pct}%`;
-        if (pct % 10 === 0) log(`Progression : ${pct}%`, "info");
+        progressBar.style.width = pct + "%";
+        if (pct % 10 === 0) log("Progression : " + pct + "%", "info");
       },
-    });
+      calculateMD5Hash: (image) => undefined,
+    };
+    await espLoader.write_flash(flashOptions);
     progressBar.style.width = "100%";
     progressBar.classList.add("done");
     log("Flash terminé avec succès ! Redémarre ton ESP32.", "success");
     setStep("Flash", "done");
   } catch (err) {
-    log(`Erreur lors du flash : ${err.message}`, "error");
+    log("Erreur lors du flash : " + err.message, "error");
     progressBar.style.width = "0%";
   }
   flashBtn.disabled = false;
