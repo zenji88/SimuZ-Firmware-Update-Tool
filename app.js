@@ -3,7 +3,7 @@ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.
 let device = null;
 let transport = null;
 let espLoader = null;
-let firmwareBytes = null;
+let firmwareData = null;
 
 const connectBtn    = document.getElementById("connectBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
@@ -82,7 +82,12 @@ firmwareInput.addEventListener("change", async () => {
   const file = firmwareInput.files[0];
   if (!file) return;
   const ab = await file.arrayBuffer();
-  firmwareBytes = new Uint8Array(ab);
+  const bytes = new Uint8Array(ab);
+let binary = "";
+for (let i = 0; i < bytes.length; i++) {
+  binary += String.fromCharCode(bytes[i]);
+}
+firmwareData = binary;
   fileNameEl.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
   fileNameEl.className = "file-name loaded";
   log("Fichier chargé : " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)", "success");
@@ -92,11 +97,11 @@ firmwareInput.addEventListener("change", async () => {
 });
 
 function updateFlashBtn() {
-  flashBtn.disabled = !(espLoader && firmwareBytes);
+  flashBtn.disabled = !(espLoader && firmwareData);
 }
 
 flashBtn.addEventListener("click", async () => {
-  if (!espLoader || !firmwareBytes) return;
+  if (!espLoader || !firmwareData) return;
   flashBtn.disabled = true;
   connectBtn.disabled = true;
   progressWrap.classList.add("visible");
@@ -106,7 +111,7 @@ flashBtn.addEventListener("click", async () => {
   try {
     await espLoader.flashId();
     const flashOptions = {
-      fileArray: [{ data: firmwareBytes, address: 0x0 }],
+      fileArray: [{ data: firmwareData, address: 0x0 }],
       flashSize: "keep",
       flashMode: "keep",
       flashFreq: "keep",
