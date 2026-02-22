@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SimuZ Firmware Update Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="logo">
+    <span>⚡</span>
+    <h1>SimuZ Firmware Update Tool</h1>
+  </div>
+  <p class="subtitle">Flash ton firmware ESP32 directement depuis le navigateur — sans installation.</p>
+
+  <!-- Steps -->
+  <div class="steps">
+
+    <!-- Step 1 : Connect -->
+    <div class="step active" id="stepConnect">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Connecter l'ESP32</h2>
+        <span class="status-badge disconnected" id="statusBadge">⚪ Non connecté</span>
+      </div>
+      <button class="btn btn-primary" id="connectBtn">📡 Connecter l'ESP32</button>
+      <button class="btn btn-danger" id="disconnectBtn" disabled style="margin-left:10px;">🔌 Déconnecter</button>
+    </div>
+
+    <!-- Step 2 : File -->
+    <div class="step" id="stepFile">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Charger le firmware</h2>
+      </div>
+      <label class="file-label" for="firmware">
+        📂 Choisir un fichier .bin
+      </label>
+      <input type="file" id="firmware" accept=".bin" />
+      <p class="file-name" id="fileName">Aucun fichier sélectionné</p>
+    </div>
+
+    <!-- Step 3 : Flash -->
+    <div class="step" id="stepFlash">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Flasher le firmware</h2>
+      </div>
+      <button class="btn btn-success" id="flashBtn" disabled>⚡ Flasher le firmware</button>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Log -->
+  <div class="log-box" id="logBox"><span class="log-info">Prêt. Connecte ton ESP32 pour commencer.\n</span></div>
+
+  <div class="footer">SimuZ Firmware Update Tool — Fonctionne sur Chrome &amp; Edge uniquement · Web Serial API</div>
+
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
