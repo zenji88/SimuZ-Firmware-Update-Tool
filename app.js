@@ -82,12 +82,13 @@ firmwareInput.addEventListener("change", async () => {
   const file = firmwareInput.files[0];
   if (!file) return;
   const ab = await file.arrayBuffer();
+  // esptool-js 0.4.3 attend une binary string dans fileArray[].data
   const bytes = new Uint8Array(ab);
-let binary = "";
-for (let i = 0; i < bytes.length; i++) {
-  binary += String.fromCharCode(bytes[i]);
-}
-firmwareData = binary;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  firmwareData = binary;
   fileNameEl.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
   fileNameEl.className = "file-name loaded";
   log("Fichier chargé : " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)", "success");
@@ -127,7 +128,7 @@ flashBtn.addEventListener("click", async () => {
     await espLoader.writeFlash(flashOptions);
     progressBar.style.width = "100%";
     progressBar.classList.add("done");
-    log("Flash terminé avec succès ! Redémarre ton ESP32.", "success");
+    log("Flash terminé avec succès ! Redémarre ton ESP32. ✅", "success");
     setStep("Flash", "done");
   } catch (err) {
     log("Erreur lors du flash : " + err.message, "error");
