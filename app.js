@@ -3,6 +3,7 @@ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.
 let device = null;
 let transport = null;
 let espLoader = null;
+let currentMode = "bundle"; // "bundle" or "manual"
 
 const files = {
   bootloader: { address: 0x0,     data: null, inputId: "fileBootloader", nameId: "nameBootloader" },
@@ -10,13 +11,19 @@ const files = {
   firmware:    { address: 0x10000, data: null, inputId: "fileFirmware",    nameId: "nameFirmware"    },
 };
 
-const connectBtn    = document.getElementById("connectBtn");
-const disconnectBtn = document.getElementById("disconnectBtn");
-const flashBtn      = document.getElementById("flashBtn");
-const statusBadge   = document.getElementById("statusBadge");
-const progressWrap  = document.getElementById("progressWrap");
-const progressBar   = document.getElementById("progressBar");
-const logBox        = document.getElementById("logBox");
+const BUNDLE_FILES = [
+  { key: "bootloader", filename: "bootloader.bin", address: 0x0     },
+  { key: "partitions", filename: "partitions.bin",  address: 0x8000  },
+  { key: "firmware",   filename: "firmware.bin",    address: 0x10000 },
+];
+
+const connectBtn   = document.getElementById("connectBtn");
+const disconnectBtn= document.getElementById("disconnectBtn");
+const flashBtn     = document.getElementById("flashBtn");
+const statusBadge  = document.getElementById("statusBadge");
+const progressWrap = document.getElementById("progressWrap");
+const progressBar  = document.getElementById("progressBar");
+const logBox       = document.getElementById("logBox");
 
 function log(msg, type = "default") {
   const span = document.createElement("span");
@@ -42,7 +49,88 @@ async function readFileAsBinaryString(file) {
   return binary;
 }
 
-// Setup file inputs
+async function uint8ArrayToBinaryString(uint8arr) {
+  let binary = "";
+  for (let i = 0; i < uint8arr.length; i++) {
+    binary += String.fromCharCode(uint8arr[i]);
+  }
+  return binary;
+}
+
+// ── Tab switch ──────────────────────────────────────────────
+window.switchTab = function(mode) {
+  currentMode = mode;
+  document.getElementById("modeBundle").style.display = mode === "bundle" ? "" : "none";
+  document.getElementById("modeManual").style.display = mode === "manual" ? "" : "none";
+  document.getElementById("tabBundle").classList.toggle("active", mode === "bundle");
+  document.getElementById("tabManual").classList.toggle("active", mode === "manual");
+  // Reset data when switching
+  Object.values(files).forEach(f => f.data = null);
+  updateFlashBtn();
+};
+
+// ── Bundle mode ─────────────────────────────────────────────
+document.getElementById("fileBundle").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById("bundleStatus");
+  statusEl.innerHTML = "";
+  Object.values(files).forEach(f => f.data = null);
+
+  log("Lecture du bundle " + file.name + "...", "info");
+
+  try {
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    let allOk = true;
+
+    for (const entry of BUNDLE_FILES) {
+      const item = document.createElement("div");
+      item.className = "bundle-item";
+
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "0x" + entry.address.toString(16).padStart(4, "0").toUpperCase();
+
+      const check = document.createElement("span");
+      check.className = "check";
+
+      const label = document.createElement("span");
+
+      const zipFile = zip.file(entry.filename);
+      if (zipFile) {
+        const uint8 = await zipFile.async("uint8array");
+        files[entry.key].data = await uint8ArrayToBinaryString(uint8);
+        item.classList.add("ok");
+        check.textContent = "✅";
+        label.textContent = entry.filename + " (" + (uint8.length / 1024).toFixed(1) + " KB)";
+        log("Chargé [0x" + entry.address.toString(16) + "] : " + entry.filename, "success");
+      } else {
+        allOk = false;
+        item.classList.add("error");
+        check.textContent = "❌";
+        label.textContent = entry.filename + " — introuvable dans le zip !";
+        log("Manquant : " + entry.filename, "error");
+      }
+
+      item.appendChild(badge);
+      item.appendChild(check);
+      item.appendChild(label);
+      statusEl.appendChild(item);
+    }
+
+    if (allOk) {
+      setStep("File", "done");
+      setStep("Flash", "active");
+    }
+    updateFlashBtn();
+
+  } catch (err) {
+    log("Erreur lecture zip : " + err.message, "error");
+  }
+});
+
+// ── Manual mode ─────────────────────────────────────────────
 for (const [key, f] of Object.entries(files)) {
   const input = document.getElementById(f.inputId);
   const nameEl = document.getElementById(f.nameId);
@@ -54,7 +142,10 @@ for (const [key, f] of Object.entries(files)) {
     nameEl.className = "file-name loaded";
     log("Chargé [0x" + f.address.toString(16) + "] : " + file.name, "success");
     updateFlashBtn();
-    if (allFilesLoaded()) setStep("File", "done");
+    if (allFilesLoaded()) {
+      setStep("File", "done");
+      setStep("Flash", "active");
+    }
   });
 }
 
@@ -66,6 +157,7 @@ function updateFlashBtn() {
   flashBtn.disabled = !(espLoader && allFilesLoaded());
 }
 
+// ── Connect ──────────────────────────────────────────────────
 connectBtn.addEventListener("click", async () => {
   if (!("serial" in navigator)) {
     log("Web Serial API non supportée. Utilise Chrome ou Edge.", "error");
@@ -99,6 +191,7 @@ connectBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Disconnect ───────────────────────────────────────────────
 disconnectBtn.addEventListener("click", async () => {
   try { if (transport) await transport.disconnect(); } catch (_) {}
   device = null; transport = null; espLoader = null;
@@ -113,6 +206,7 @@ disconnectBtn.addEventListener("click", async () => {
   log("Déconnecté.", "info");
 });
 
+// ── Flash ────────────────────────────────────────────────────
 flashBtn.addEventListener("click", async () => {
   if (!espLoader || !allFilesLoaded()) return;
   flashBtn.disabled = true;
