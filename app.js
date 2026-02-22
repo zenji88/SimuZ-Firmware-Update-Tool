@@ -3,7 +3,7 @@ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.
 let device = null;
 let transport = null;
 let espLoader = null;
-let firmwareData = null;
+let firmwareBytes = null;
 
 const connectBtn    = document.getElementById("connectBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
@@ -82,10 +82,7 @@ firmwareInput.addEventListener("change", async () => {
   const file = firmwareInput.files[0];
   if (!file) return;
   const ab = await file.arrayBuffer();
-  const bytes = new Uint8Array(ab);
-  let binary = "";
-  bytes.forEach((b) => (binary += String.fromCharCode(b)));
-  firmwareData = binary;
+  firmwareBytes = new Uint8Array(ab);
   fileNameEl.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
   fileNameEl.className = "file-name loaded";
   log("Fichier chargé : " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)", "success");
@@ -95,11 +92,11 @@ firmwareInput.addEventListener("change", async () => {
 });
 
 function updateFlashBtn() {
-  flashBtn.disabled = !(espLoader && firmwareData);
+  flashBtn.disabled = !(espLoader && firmwareBytes);
 }
 
 flashBtn.addEventListener("click", async () => {
-  if (!espLoader || !firmwareData) return;
+  if (!espLoader || !firmwareBytes) return;
   flashBtn.disabled = true;
   connectBtn.disabled = true;
   progressWrap.classList.add("visible");
@@ -107,9 +104,9 @@ flashBtn.addEventListener("click", async () => {
   progressBar.classList.remove("done");
   log("Démarrage du flash...", "info");
   try {
-    await espLoader.flash_id();
+    await espLoader.flashId();
     const flashOptions = {
-      fileArray: [{ data: firmwareData, address: 0x1000 }],
+      fileArray: [{ data: firmwareBytes, address: 0x0 }],
       flashSize: "keep",
       flashMode: "keep",
       flashFreq: "keep",
@@ -120,9 +117,9 @@ flashBtn.addEventListener("click", async () => {
         progressBar.style.width = pct + "%";
         if (pct % 10 === 0) log("Progression : " + pct + "%", "info");
       },
-      calculateMD5Hash: (image) => undefined,
+      calculateMD5Hash: undefined,
     };
-    await espLoader.write_flash(flashOptions);
+    await espLoader.writeFlash(flashOptions);
     progressBar.style.width = "100%";
     progressBar.classList.add("done");
     log("Flash terminé avec succès ! Redémarre ton ESP32.", "success");
