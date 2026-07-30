@@ -60,6 +60,10 @@ const fileBundleInput = document.getElementById("fileBundle");
 const selectedBundleNameEl = document.getElementById("selectedBundleName");
 const bundleStatusEl = document.getElementById("bundleStatus");
 
+// État initial UI (important)
+versionRow.style.display = "";
+customZipPicker.style.display = "none";
+
 function log(msg, type = "default") {
   const span = document.createElement("span");
   span.className = type !== "default" ? `log-${type}` : "";
@@ -70,6 +74,7 @@ function log(msg, type = "default") {
 
 function setStep(step, state) {
   const el = document.getElementById(`step${step}`);
+  if (!el) return;
   el.classList.remove("active", "done");
   if (state) el.classList.add(state);
 }
@@ -96,9 +101,6 @@ function updateFlashBtn() {
     return;
   }
 
-  // Règle: on autorise flash uniquement avec un bundle chargé.
-  // - Types 1-4 : bundle doit correspondre au nom attendu
-  // - Type 5 custom : bundle chargé libre
   if (selectedSoftwareType === "custom") {
     flashBtn.disabled = !loadedBundleFileName;
   } else {
@@ -129,6 +131,7 @@ function populateVersionSelect(typeKey) {
     opt.textContent = version.label;
     softwareVersionSelect.appendChild(opt);
   }
+
   softwareVersionSelect.disabled = false;
 }
 
@@ -194,7 +197,7 @@ fileBundleInput.addEventListener("change", async (e) => {
     return;
   }
 
-  // En non-custom, on bloque l'upload direct
+  // En non-custom, l'upload manuel est bloqué
   if (selectedSoftwareType !== "custom") {
     log("Le chargement manuel du .zip est réservé au type 5 (Flash My Custom Software).", "error");
     e.target.value = "";
@@ -265,9 +268,11 @@ connectBtn.addEventListener("click", async () => {
     log("Web Serial API non supportée. Utilise Chrome ou Edge.", "error");
     return;
   }
+
   try {
     device = await navigator.serial.requestPort();
     transport = new Transport(device, true);
+
     espLoader = new ESPLoader({
       transport,
       baudrate: 115200,
@@ -280,12 +285,15 @@ connectBtn.addEventListener("click", async () => {
 
     log("Connexion en cours...", "info");
     await espLoader.main();
+
     const chipName = espLoader.chip.CHIP_NAME;
     log("Connecté ! Puce détectée : " + chipName, "success");
     statusBadge.textContent = "✅ " + chipName;
     statusBadge.className = "status-badge connected";
+
     connectBtn.disabled = true;
     disconnectBtn.disabled = false;
+
     setStep("Connect", "done");
     setStep("File", "active");
     updateFlashBtn();
@@ -296,16 +304,21 @@ connectBtn.addEventListener("click", async () => {
 
 // ── Disconnect
 disconnectBtn.addEventListener("click", async () => {
-  try { if (transport) await transport.disconnect(); } catch (_) {}
+  try {
+    if (transport) await transport.disconnect();
+  } catch (_) {}
+
   device = null;
   transport = null;
   espLoader = null;
 
   statusBadge.textContent = "⚪ Non connecté";
   statusBadge.className = "status-badge disconnected";
+
   connectBtn.disabled = false;
   disconnectBtn.disabled = true;
   flashBtn.disabled = true;
+
   setStep("Connect", "active");
   setStep("File", "");
   setStep("Flash", "");
@@ -318,9 +331,11 @@ flashBtn.addEventListener("click", async () => {
 
   flashBtn.disabled = true;
   connectBtn.disabled = true;
+
   progressWrap.classList.add("visible");
   progressBar.style.width = "0%";
   progressBar.classList.remove("done");
+
   log("Démarrage du flash...", "info");
 
   try {
