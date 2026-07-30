@@ -14,6 +14,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .step.active .step-number { background: #4f6ef7; color: white; }
 .step.done .step-number { background: #22c55e; color: white; }
 .step-header h2 { font-size: 1rem; font-weight: 600; color: #e0e0e0; }
+
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -22,41 +23,35 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .btn-success { background: #22c55e; color: white; }
 .btn-success:hover:not(:disabled) { background: #16a34a; }
 .btn-danger { background: #ef4444; color: white; }
+
 .file-label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #2e3147; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #e0e0e0; transition: background 0.2s; }
 .file-label:hover { background: #3a3f5c; }
 input[type="file"] { display: none; }
 .file-name { margin-top: 8px; font-size: 0.82rem; color: #6b7280; }
 .file-name.loaded { color: #22c55e; }
+
 .status-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 4px 10px; border-radius: 20px; margin-left: auto; }
 .status-badge.connected { background: #14532d; color: #86efac; }
 .status-badge.disconnected { background: #2e3147; color: #6b7280; }
+
 .progress-wrap { margin-top: 12px; background: #2e3147; border-radius: 8px; overflow: hidden; height: 8px; display: none; }
 .progress-wrap.visible { display: block; }
 .progress-bar { height: 100%; background: #4f6ef7; width: 0%; transition: width 0.3s; border-radius: 8px; }
 .progress-bar.done { background: #22c55e; }
+
 .log-box { margin-top: 28px; background: #0a0c14; border: 1px solid #2e3147; border-radius: 10px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.8rem; color: #a0aec0; height: 180px; overflow-y: auto; white-space: pre-wrap; }
 .log-box .log-success { color: #22c55e; }
 .log-box .log-error { color: #ef4444; }
 .log-box .log-info { color: #60a5fa; }
 .footer { margin-top: 24px; text-align: center; font-size: 0.78rem; color: #374151; }
-.file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.file-tag { background: #2e3147; color: #60a5fa; font-family: monospace; font-size: 0.82rem; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
 
-/* Bundle software selector */
-.bundle-catalog { margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.bundle-catalog { margin-bottom: 4px; display: flex; flex-direction: column; gap: 10px; }
 .select-row { display: flex; flex-direction: column; gap: 6px; }
 .select-label { font-size: 0.82rem; color: #a0aec0; }
 .select-input { background: #0f1117; color: #e0e0e0; border: 1px solid #2e3147; border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; }
 .select-input:focus { outline: none; border-color: #4f6ef7; box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15); }
 .select-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Tabs */
-.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-.tab { padding: 8px 18px; border-radius: 8px; border: 1px solid #2e3147; background: #12151f; color: #6b7280; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.tab:hover { border-color: #4f6ef7; color: #e0e0e0; }
-.tab.active { background: #4f6ef7; border-color: #4f6ef7; color: white; }
-
-/* Bundle status */
 .bundle-status { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 .bundle-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
 .bundle-item .badge { font-family: monospace; background: #2e3147; color: #60a5fa; padding: 2px 7px; border-radius: 5px; font-size: 0.78rem; }
