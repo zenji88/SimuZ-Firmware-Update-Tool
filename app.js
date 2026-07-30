@@ -30,6 +30,7 @@ const SOFTWARE_CATALOG = {
 let selectedSoftwareType = "";
 let selectedSoftwareVersion = "";
 let selectedBundleFilename = "";
+let loadedBundleFileName = "";
 
 const files = {
   bootloader: { address: 0x0, data: null },
@@ -50,12 +51,14 @@ const statusBadge = document.getElementById("statusBadge");
 const progressWrap = document.getElementById("progressWrap");
 const progressBar = document.getElementById("progressBar");
 const logBox = document.getElementById("logBox");
+
 const softwareTypeSelect = document.getElementById("softwareType");
 const softwareVersionSelect = document.getElementById("softwareVersion");
+const versionRow = document.getElementById("versionRow");
+const customZipPicker = document.getElementById("customZipPicker");
+const fileBundleInput = document.getElementById("fileBundle");
 const selectedBundleNameEl = document.getElementById("selectedBundleName");
 const bundleStatusEl = document.getElementById("bundleStatus");
-const versionRow = document.getElementById("versionRow");
-const fileBundleInput = document.getElementById("fileBundle");
 
 function log(msg, type = "default") {
   const span = document.createElement("span");
@@ -80,6 +83,7 @@ async function uint8ArrayToBinaryString(uint8arr) {
 function resetFiles() {
   Object.values(files).forEach((f) => (f.data = null));
   bundleStatusEl.innerHTML = "";
+  loadedBundleFileName = "";
 }
 
 function allFilesLoaded() {
@@ -87,7 +91,19 @@ function allFilesLoaded() {
 }
 
 function updateFlashBtn() {
-  flashBtn.disabled = !(espLoader && allFilesLoaded());
+  if (!espLoader || !allFilesLoaded()) {
+    flashBtn.disabled = true;
+    return;
+  }
+
+  // Règle: on autorise flash uniquement avec un bundle chargé.
+  // - Types 1-4 : bundle doit correspondre au nom attendu
+  // - Type 5 custom : bundle chargé libre
+  if (selectedSoftwareType === "custom") {
+    flashBtn.disabled = !loadedBundleFileName;
+  } else {
+    flashBtn.disabled = !(loadedBundleFileName && loadedBundleFileName === selectedBundleFilename);
+  }
 }
 
 function setSelectedBundleInfo(text, loaded = false) {
@@ -129,16 +145,22 @@ softwareTypeSelect.addEventListener("change", () => {
   selectedBundleFilename = "";
 
   populateVersionSelect(selectedSoftwareType);
-  versionRow.style.display = selectedSoftwareType === "custom" ? "none" : "";
 
-  if (selectedSoftwareType === "custom") {
+  const isCustom = selectedSoftwareType === "custom";
+  versionRow.style.display = isCustom ? "none" : "";
+  customZipPicker.style.display = isCustom ? "" : "none";
+
+  if (isCustom) {
     setSelectedBundleInfo("Mode custom: choisis n'importe quel bundle .zip");
+  } else if (selectedSoftwareType) {
+    setSelectedBundleInfo("Sélectionne une version pour connaître le bundle attendu.");
   } else {
     setSelectedBundleInfo("Aucun bundle sélectionné");
   }
 
   fileBundleInput.value = "";
   resetFiles();
+  setStep("Flash", "");
   updateFlashBtn();
 });
 
@@ -148,13 +170,17 @@ softwareVersionSelect.addEventListener("change", () => {
 
   if (selectedBundleFilename) {
     setSelectedBundleInfo(`Bundle attendu : ${selectedBundleFilename}`);
-    log(`Type/version: ${SOFTWARE_CATALOG[selectedSoftwareType].label} / ${selectedSoftwareVersion}`, "info");
+    log(`Type/version sélectionné : ${SOFTWARE_CATALOG[selectedSoftwareType].label} / ${selectedSoftwareVersion}`, "info");
+    log(`Bundle attendu : ${selectedBundleFilename}`, "info");
+  } else if (selectedSoftwareType && selectedSoftwareType !== "custom") {
+    setSelectedBundleInfo("Sélectionne une version.");
   } else {
     setSelectedBundleInfo("Aucun bundle sélectionné");
   }
 
   fileBundleInput.value = "";
   resetFiles();
+  setStep("Flash", "");
   updateFlashBtn();
 });
 
@@ -162,26 +188,17 @@ fileBundleInput.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  // Validation selon type
   if (!selectedSoftwareType) {
     log("Sélectionne d'abord un type de software.", "error");
     e.target.value = "";
     return;
   }
 
+  // En non-custom, on bloque l'upload direct
   if (selectedSoftwareType !== "custom") {
-    if (!selectedSoftwareVersion || !selectedBundleFilename) {
-      log("Sélectionne d'abord une version.", "error");
-      e.target.value = "";
-      return;
-    }
-    if (file.name !== selectedBundleFilename) {
-      log(`Bundle invalide: ${file.name}. Attendu: ${selectedBundleFilename}`, "error");
-      e.target.value = "";
-      resetFiles();
-      updateFlashBtn();
-      return;
-    }
+    log("Le chargement manuel du .zip est réservé au type 5 (Flash My Custom Software).", "error");
+    e.target.value = "";
+    return;
   }
 
   resetFiles();
@@ -211,11 +228,13 @@ fileBundleInput.addEventListener("change", async (e) => {
         item.classList.add("ok");
         check.textContent = "✅";
         label.textContent = `${entry.filename} (${(uint8.length / 1024).toFixed(1)} KB)`;
+        log(`Chargé [0x${entry.address.toString(16)}] : ${entry.filename}`, "success");
       } else {
         allOk = false;
         item.classList.add("error");
         check.textContent = "❌";
         label.textContent = `${entry.filename} — introuvable dans le zip`;
+        log(`Manquant : ${entry.filename}`, "error");
       }
 
       item.appendChild(badge);
@@ -225,12 +244,13 @@ fileBundleInput.addEventListener("change", async (e) => {
     }
 
     if (allOk) {
+      loadedBundleFileName = file.name;
       setSelectedBundleInfo(`✅ ${file.name} chargé`, true);
       setStep("File", "done");
       setStep("Flash", "active");
-      log("Bundle valide et prêt à flasher.", "success");
+      log("Bundle custom valide et prêt à flasher.", "success");
     } else {
-      log("Bundle incomplet: fichiers requis manquants.", "error");
+      log("Bundle incomplet : fichiers requis manquants.", "error");
     }
 
     updateFlashBtn();
@@ -277,7 +297,10 @@ connectBtn.addEventListener("click", async () => {
 // ── Disconnect
 disconnectBtn.addEventListener("click", async () => {
   try { if (transport) await transport.disconnect(); } catch (_) {}
-  device = null; transport = null; espLoader = null;
+  device = null;
+  transport = null;
+  espLoader = null;
+
   statusBadge.textContent = "⚪ Non connecté";
   statusBadge.className = "status-badge disconnected";
   connectBtn.disabled = false;
@@ -302,7 +325,11 @@ flashBtn.addEventListener("click", async () => {
 
   try {
     await espLoader.flashId();
-    const fileArray = Object.values(files).map((f) => ({ data: f.data, address: f.address }));
+
+    const fileArray = Object.values(files).map((f) => ({
+      data: f.data,
+      address: f.address,
+    }));
 
     await espLoader.writeFlash({
       fileArray,
@@ -331,4 +358,5 @@ flashBtn.addEventListener("click", async () => {
 
   flashBtn.disabled = false;
   connectBtn.disabled = false;
+  updateFlashBtn();
 });
