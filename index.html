@@ -38,6 +38,29 @@
         <h2>Charger les fichiers</h2>
       </div>
 
+      <!-- Bundle selector -->
+      <div id="bundleCatalog" class="bundle-catalog">
+        <div class="select-row">
+          <label for="softwareType" class="select-label">Type de software</label>
+          <select id="softwareType" class="select-input">
+            <option value="">-- Sélectionner un type --</option>
+            <option value="formula">1. Formula</option>
+            <option value="simple_emulator">2. Simple Emulator</option>
+            <option value="universal_beta">3. Universal (Beta)</option>
+            <option value="full_gt_beta">4. Full GT (Beta)</option>
+          </select>
+        </div>
+
+        <div class="select-row">
+          <label for="softwareVersion" class="select-label">Version</label>
+          <select id="softwareVersion" class="select-input" disabled>
+            <option value="">-- Sélectionner une version --</option>
+          </select>
+        </div>
+
+        <p class="file-name" id="selectedBundleName">Aucun bundle sélectionné</p>
+      </div>
+
       <!-- Tabs -->
       <div class="tabs">
         <button class="tab active" id="tabBundle" onclick="switchTab('bundle')">📦 Bundle .zip</button>

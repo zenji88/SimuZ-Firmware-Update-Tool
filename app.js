@@ -5,6 +5,37 @@ let transport = null;
 let espLoader = null;
 let currentMode = "bundle"; // "bundle" or "manual"
 
+const SOFTWARE_CATALOG = {
+  formula: {
+    label: "Formula",
+    versions: [
+      { label: "v1.0.0", bundle: "formula-v1.0.0.zip" },
+    ],
+  },
+  simple_emulator: {
+    label: "Simple Emulator",
+    versions: [
+      { label: "v1.0.0", bundle: "simple-emulator-v1.0.0.zip" },
+    ],
+  },
+  universal_beta: {
+    label: "Universal (Beta)",
+    versions: [
+      { label: "v0.9.0-beta", bundle: "universal-v0.9.0-beta.zip" },
+    ],
+  },
+  full_gt_beta: {
+    label: "Full GT (Beta)",
+    versions: [
+      { label: "v0.8.1-beta", bundle: "full-gt-v0.8.1-beta.zip" },
+    ],
+  },
+};
+
+let selectedSoftwareType = "";
+let selectedSoftwareVersion = "";
+let selectedBundleFilename = "";
+
 const files = {
   bootloader: { address: 0x0,     data: null, inputId: "fileBootloader", nameId: "nameBootloader" },
   partitions:  { address: 0x8000,  data: null, inputId: "filePartitions",  nameId: "namePartitions"  },
@@ -24,6 +55,9 @@ const statusBadge  = document.getElementById("statusBadge");
 const progressWrap = document.getElementById("progressWrap");
 const progressBar  = document.getElementById("progressBar");
 const logBox       = document.getElementById("logBox");
+const softwareTypeSelect = document.getElementById("softwareType");
+const softwareVersionSelect = document.getElementById("softwareVersion");
+const selectedBundleNameEl = document.getElementById("selectedBundleName");
 
 function log(msg, type = "default") {
   const span = document.createElement("span");
@@ -57,6 +91,85 @@ async function uint8ArrayToBinaryString(uint8arr) {
   return binary;
 }
 
+function resetLoadedFilesVisuals() {
+  document.getElementById("bundleStatus").innerHTML = "";
+  for (const [, f] of Object.entries(files)) {
+    const nameEl = document.getElementById(f.nameId);
+    if (nameEl) {
+      nameEl.textContent = "Aucun fichier";
+      nameEl.className = "file-name";
+    }
+  }
+}
+
+function setSelectedBundleInfo(text, isLoaded = false) {
+  selectedBundleNameEl.textContent = text;
+  selectedBundleNameEl.className = isLoaded ? "file-name loaded" : "file-name";
+}
+
+function populateVersionSelect(typeKey) {
+  softwareVersionSelect.innerHTML = "";
+
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "-- Sélectionner une version --";
+  softwareVersionSelect.appendChild(defaultOpt);
+
+  if (!typeKey || !SOFTWARE_CATALOG[typeKey]) {
+    softwareVersionSelect.disabled = true;
+    return;
+  }
+
+  for (const version of SOFTWARE_CATALOG[typeKey].versions) {
+    const opt = document.createElement("option");
+    opt.value = version.label;
+    opt.textContent = version.label;
+    softwareVersionSelect.appendChild(opt);
+  }
+
+  softwareVersionSelect.disabled = false;
+}
+
+function getSelectedBundleFilename() {
+  if (!selectedSoftwareType || !selectedSoftwareVersion) return "";
+  const group = SOFTWARE_CATALOG[selectedSoftwareType];
+  if (!group) return "";
+  const version = group.versions.find(v => v.label === selectedSoftwareVersion);
+  return version ? version.bundle : "";
+}
+
+softwareTypeSelect.addEventListener("change", () => {
+  selectedSoftwareType = softwareTypeSelect.value;
+  selectedSoftwareVersion = "";
+  selectedBundleFilename = "";
+
+  populateVersionSelect(selectedSoftwareType);
+  setSelectedBundleInfo("Aucun bundle sélectionné");
+
+  document.getElementById("fileBundle").value = "";
+  Object.values(files).forEach(f => f.data = null);
+  resetLoadedFilesVisuals();
+  updateFlashBtn();
+});
+
+softwareVersionSelect.addEventListener("change", () => {
+  selectedSoftwareVersion = softwareVersionSelect.value;
+  selectedBundleFilename = getSelectedBundleFilename();
+
+  if (selectedBundleFilename) {
+    setSelectedBundleInfo(`Bundle attendu : ${selectedBundleFilename}`);
+    log(`Type sélectionné : ${SOFTWARE_CATALOG[selectedSoftwareType].label} / ${selectedSoftwareVersion}`, "info");
+    log(`Bundle attendu : ${selectedBundleFilename}`, "info");
+  } else {
+    setSelectedBundleInfo("Aucun bundle sélectionné");
+  }
+
+  document.getElementById("fileBundle").value = "";
+  Object.values(files).forEach(f => f.data = null);
+  resetLoadedFilesVisuals();
+  updateFlashBtn();
+});
+
 // ── Tab switch ──────────────────────────────────────────────
 window.switchTab = function(mode) {
   currentMode = mode;
@@ -66,6 +179,7 @@ window.switchTab = function(mode) {
   document.getElementById("tabManual").classList.toggle("active", mode === "manual");
   // Reset data when switching
   Object.values(files).forEach(f => f.data = null);
+  resetLoadedFilesVisuals();
   updateFlashBtn();
 };
 
@@ -73,6 +187,21 @@ window.switchTab = function(mode) {
 document.getElementById("fileBundle").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+
+  if (!selectedSoftwareType || !selectedSoftwareVersion || !selectedBundleFilename) {
+    log("Sélectionne d'abord un type de software et une version.", "error");
+    e.target.value = "";
+    return;
+  }
+
+  if (file.name !== selectedBundleFilename) {
+    log(`Bundle invalide : ${file.name}. Attendu : ${selectedBundleFilename}`, "error");
+    e.target.value = "";
+    Object.values(files).forEach(f => f.data = null);
+    resetLoadedFilesVisuals();
+    updateFlashBtn();
+    return;
+  }
 
   const statusEl = document.getElementById("bundleStatus");
   statusEl.innerHTML = "";
@@ -120,6 +249,7 @@ document.getElementById("fileBundle").addEventListener("change", async (e) => {
     }
 
     if (allOk) {
+      setSelectedBundleInfo(`✅ ${file.name} chargé`, true);
       setStep("File", "done");
       setStep("Flash", "active");
     }
