@@ -58,8 +58,11 @@
           </select>
         </div>
 
-        <label class="file-label" for="fileBundle">📂 Choisir un fichier .zip</label>
-        <input type="file" id="fileBundle" accept=".zip" />
+        <!-- Visible uniquement en mode custom -->
+        <div id="customZipPicker" style="display:none;">
+          <label class="file-label" for="fileBundle">📂 Choisir un fichier .zip</label>
+          <input type="file" id="fileBundle" accept=".zip" />
+        </div>
 
         <p class="file-name" id="selectedBundleName">Aucun bundle sélectionné</p>
         <div id="bundleStatus" class="bundle-status"></div>
