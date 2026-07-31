@@ -58,7 +58,7 @@
           </select>
         </div>
 
-        <!-- Visible uniquement en mode custom -->
+        <!-- Visible uniquement en mode custom (type 5) -->
         <div id="customZipPicker" style="display:none;">
           <label class="file-label" for="fileBundle">📂 Choisir un fichier .zip</label>
           <input type="file" id="fileBundle" accept=".zip" />
@@ -87,13 +87,21 @@
   <div class="log-box" id="logBox"><span class="log-info">Prêt. Connecte ton ESP32 pour commencer.\n</span></div>
 
   <div class="footer">SimuZ Firmware Update Tool — Fonctionne sur Chrome &amp; Edge uniquement · Web Serial API</div>
-
 </div>
+
+<!-- Config repo pour chargement auto des firmwares -->
+<script>
+  window.SIMUZ_REPO = {
+    owner: "zenji88",
+    repo: "SimuZ-Firmware-Update-Tool",
+    branch: "main"
+  };
+</script>
 
 <!-- Buffer polyfill -->
 <script src="https://bundle.run/buffer@6.0.3"></script>
 <script>
-  if (typeof window.Buffer === 'undefined') {
+  if (typeof window.Buffer === "undefined") {
     window.Buffer = buffer.Buffer;
   }
 </script>
