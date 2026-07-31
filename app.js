@@ -207,58 +207,64 @@ function renderBundleItem(addressHex, fileLabel, ok, details = "") {
   bundleStatusEl.appendChild(item);
 }
 
+// ======================= DEBUG PARSER =======================
 async function parseZipArrayBuffer(arrayBuffer, displayName) {
   resetFiles();
   log("Lecture du bundle " + displayName + "...", "info");
 
   const zip = await JSZip.loadAsync(arrayBuffer);
-  let allOk = true;
 
-  // Index des entrées du zip en minuscule -> vrai nom
-  const zipEntries = Object.keys(zip.files);
-  const lowerToRealPath = new Map();
-  for (const p of zipEntries) lowerToRealPath.set(p.toLowerCase(), p);
+  const entries = Object.keys(zip.files);
+  const fileEntries = entries.filter((p) => !zip.files[p].dir);
 
-  // Cherche un fichier soit à la racine, soit dans un sous-dossier
-  function findZipPath(filename) {
+  log(`ZIP entries total: ${entries.length}`, "info");
+  log(`ZIP files (non-dir): ${fileEntries.length}`, "info");
+  for (const p of fileEntries) log(`- ${p}`, "info");
+
+  // cherche strictement les 3 noms, peu importe sous-dossier
+  function findByExactName(filename) {
     const target = filename.toLowerCase();
-
-    // exact racine
-    if (lowerToRealPath.has(target)) return lowerToRealPath.get(target);
-
-    // n'importe quel sous-dossier
-    for (const p of zipEntries) {
-      const lp = p.toLowerCase();
-      if (lp.endsWith("/" + target)) return p;
+    for (const p of fileEntries) {
+      if (p.split("/").pop().toLowerCase() === target) return p;
     }
     return null;
   }
 
-  for (const entry of BUNDLE_FILES) {
-    const addrHex = "0x" + entry.address.toString(16).padStart(4, "0").toUpperCase();
-    const foundPath = findZipPath(entry.filename);
+  const found = {
+    bootloader: findByExactName("bootloader.bin"),
+    partitions: findByExactName("partitions.bin"),
+    firmware: findByExactName("firmware.bin"),
+  };
 
-    if (foundPath) {
-      const zipFile = zip.file(foundPath);
-      const uint8 = await zipFile.async("uint8array");
-      files[entry.key].data = await uint8ArrayToBinaryString(uint8);
+  const mapping = [
+    { key: "bootloader", expected: "bootloader.bin", address: 0x0 },
+    { key: "partitions", expected: "partitions.bin", address: 0x8000 },
+    { key: "firmware", expected: "firmware.bin", address: 0x10000 },
+  ];
 
-      renderBundleItem(
-        addrHex,
-        `${entry.filename} ← ${foundPath}`,
-        true,
-        `(${(uint8.length / 1024).toFixed(1)} KB)`
-      );
-      log(`Chargé [${addrHex}] : ${entry.filename} (source: ${foundPath})`, "success");
-    } else {
+  let allOk = true;
+
+  for (const m of mapping) {
+    const addrHex = "0x" + m.address.toString(16).padStart(4, "0").toUpperCase();
+    const path = found[m.key];
+
+    if (!path) {
       allOk = false;
-      renderBundleItem(addrHex, `${entry.filename} — introuvable dans le zip`, false);
-      log(`Manquant : ${entry.filename}`, "error");
+      renderBundleItem(addrHex, `${m.expected} — introuvable`, false);
+      log(`Manquant: ${m.expected}`, "error");
+      continue;
     }
+
+    const zf = zip.file(path);
+    const uint8 = await zf.async("uint8array");
+
+    files[m.key].data = await uint8ArrayToBinaryString(uint8);
+    renderBundleItem(addrHex, `${m.expected} ← ${path}`, true, `(${(uint8.length / 1024).toFixed(1)} KB)`);
+    log(`OK: ${m.expected} trouvé via ${path}`, "success");
   }
 
   if (!allOk) {
-    throw new Error("Bundle incomplet : fichiers requis manquants.");
+    throw new Error("Bundle incomplet: noms requis non trouvés.");
   }
 
   loadedBundleFileName = displayName;
@@ -267,6 +273,7 @@ async function parseZipArrayBuffer(arrayBuffer, displayName) {
   setStep("Flash", "active");
   updateFlashBtn();
 }
+// ===========================================================
 
 async function autoLoadSelectedFirmwareZip() {
   const entry = getSelectedVersionEntry();
