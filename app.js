@@ -116,7 +116,9 @@ function humanVersionFromFilename(filename) {
 }
 
 function sortVersionsDesc(filesList) {
-  return [...filesList].sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: "base" }));
+  return [...filesList].sort((a, b) =>
+    b.localeCompare(a, undefined, { numeric: true, sensitivity: "base" })
+  );
 }
 
 function buildApiContentsUrl(folderPath) {
@@ -124,7 +126,6 @@ function buildApiContentsUrl(folderPath) {
 }
 
 function buildRawZipUrl(folderPath, zipName) {
-  // URL raw fiable pour GitHub
   return `https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/${encodeURIComponent(REPO.branch).replace(/%2F/g, "/")}/${folderPath}/${encodeURIComponent(zipName)}`;
 }
 
@@ -213,15 +214,42 @@ async function parseZipArrayBuffer(arrayBuffer, displayName) {
   const zip = await JSZip.loadAsync(arrayBuffer);
   let allOk = true;
 
-  for (const entry of BUNDLE_FILES) {
-    const zipFile = zip.file(entry.filename);
-    const addrHex = "0x" + entry.address.toString(16).padStart(4, "0").toUpperCase();
+  // Index des entrées du zip en minuscule -> vrai nom
+  const zipEntries = Object.keys(zip.files);
+  const lowerToRealPath = new Map();
+  for (const p of zipEntries) lowerToRealPath.set(p.toLowerCase(), p);
 
-    if (zipFile) {
+  // Cherche un fichier soit à la racine, soit dans un sous-dossier
+  function findZipPath(filename) {
+    const target = filename.toLowerCase();
+
+    // exact racine
+    if (lowerToRealPath.has(target)) return lowerToRealPath.get(target);
+
+    // n'importe quel sous-dossier
+    for (const p of zipEntries) {
+      const lp = p.toLowerCase();
+      if (lp.endsWith("/" + target)) return p;
+    }
+    return null;
+  }
+
+  for (const entry of BUNDLE_FILES) {
+    const addrHex = "0x" + entry.address.toString(16).padStart(4, "0").toUpperCase();
+    const foundPath = findZipPath(entry.filename);
+
+    if (foundPath) {
+      const zipFile = zip.file(foundPath);
       const uint8 = await zipFile.async("uint8array");
       files[entry.key].data = await uint8ArrayToBinaryString(uint8);
-      renderBundleItem(addrHex, entry.filename, true, `(${(uint8.length / 1024).toFixed(1)} KB)`);
-      log(`Chargé [${addrHex}] : ${entry.filename}`, "success");
+
+      renderBundleItem(
+        addrHex,
+        `${entry.filename} ← ${foundPath}`,
+        true,
+        `(${(uint8.length / 1024).toFixed(1)} KB)`
+      );
+      log(`Chargé [${addrHex}] : ${entry.filename} (source: ${foundPath})`, "success");
     } else {
       allOk = false;
       renderBundleItem(addrHex, `${entry.filename} — introuvable dans le zip`, false);
@@ -334,7 +362,7 @@ softwareVersionSelect.addEventListener("change", async () => {
   setSelectedBundleInfo(`Version choisie : ${entry.label}`);
   log(`Type/version : ${TYPE_LABELS[selectedSoftwareType]} / ${entry.label}`, "info");
 
-  // 🔥 Auto-download + auto-parse du zip
+  // Auto-download + auto-parse du zip
   await autoLoadSelectedFirmwareZip();
 });
 
