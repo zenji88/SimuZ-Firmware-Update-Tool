@@ -28,19 +28,21 @@ const TYPE_LABELS = {
 
 let selectedSoftwareType = "";
 let selectedSoftwareVersion = "";
-let selectedBundleFilename = ""; // nom zip choisi
-let loadedBundleFileName = "";   // nom zip réellement chargé
+let selectedBundleFilename = "";
+let loadedBundleFileName = "";
 
 const files = {
-  bootloader: { address: 0x0, data: null },
+  bootloader: { address: 0x1000, data: null },
   partitions: { address: 0x8000, data: null },
+  boot_app0: { address: 0xE000, data: null }, // optionnel
   firmware: { address: 0x10000, data: null },
 };
 
 const BUNDLE_FILES = [
-  { key: "bootloader", filename: "bootloader.bin", address: 0x0 },
-  { key: "partitions", filename: "partitions.bin", address: 0x8000 },
-  { key: "firmware", filename: "firmware.bin", address: 0x10000 },
+  { key: "bootloader", filename: "bootloader.bin", address: 0x1000, required: true },
+  { key: "partitions", filename: "partitions.bin", address: 0x8000, required: true },
+  { key: "boot_app0", filename: "boot_app0.bin", address: 0xE000, required: false }, // optionnel
+  { key: "firmware", filename: "firmware.bin", address: 0x10000, required: true },
 ];
 
 const connectBtn = document.getElementById("connectBtn");
@@ -63,7 +65,6 @@ const bundleStatusEl = document.getElementById("bundleStatus");
 versionRow.style.display = "";
 customZipPicker.style.display = "none";
 
-// cache des versions par type
 const versionsCache = {
   formula: [],
   simple_emulator: [],
@@ -98,12 +99,12 @@ function resetFiles() {
   loadedBundleFileName = "";
 }
 
-function allFilesLoaded() {
-  return Object.values(files).every((f) => f.data !== null);
+function allRequiredFilesLoaded() {
+  return BUNDLE_FILES.every((entry) => (!entry.required ? true : files[entry.key].data !== null));
 }
 
 function updateFlashBtn() {
-  flashBtn.disabled = !(espLoader && allFilesLoaded());
+  flashBtn.disabled = !(espLoader && allRequiredFilesLoaded());
 }
 
 function setSelectedBundleInfo(text, loaded = false) {
@@ -207,21 +208,13 @@ function renderBundleItem(addressHex, fileLabel, ok, details = "") {
   bundleStatusEl.appendChild(item);
 }
 
-// ======================= DEBUG PARSER =======================
 async function parseZipArrayBuffer(arrayBuffer, displayName) {
   resetFiles();
   log("Lecture du bundle " + displayName + "...", "info");
 
   const zip = await JSZip.loadAsync(arrayBuffer);
+  const fileEntries = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
 
-  const entries = Object.keys(zip.files);
-  const fileEntries = entries.filter((p) => !zip.files[p].dir);
-
-  log(`ZIP entries total: ${entries.length}`, "info");
-  log(`ZIP files (non-dir): ${fileEntries.length}`, "info");
-  for (const p of fileEntries) log(`- ${p}`, "info");
-
-  // cherche strictement les 3 noms, peu importe sous-dossier
   function findByExactName(filename) {
     const target = filename.toLowerCase();
     for (const p of fileEntries) {
@@ -230,41 +223,34 @@ async function parseZipArrayBuffer(arrayBuffer, displayName) {
     return null;
   }
 
-  const found = {
-    bootloader: findByExactName("bootloader.bin"),
-    partitions: findByExactName("partitions.bin"),
-    firmware: findByExactName("firmware.bin"),
-  };
-
-  const mapping = [
-    { key: "bootloader", expected: "bootloader.bin", address: 0x0 },
-    { key: "partitions", expected: "partitions.bin", address: 0x8000 },
-    { key: "firmware", expected: "firmware.bin", address: 0x10000 },
-  ];
-
   let allOk = true;
 
-  for (const m of mapping) {
-    const addrHex = "0x" + m.address.toString(16).padStart(4, "0").toUpperCase();
-    const path = found[m.key];
+  for (const entry of BUNDLE_FILES) {
+    const addrHex = "0x" + entry.address.toString(16).padStart(4, "0").toUpperCase();
+    const path = findByExactName(entry.filename);
 
     if (!path) {
-      allOk = false;
-      renderBundleItem(addrHex, `${m.expected} — introuvable`, false);
-      log(`Manquant: ${m.expected}`, "error");
+      if (entry.required) {
+        allOk = false;
+        renderBundleItem(addrHex, `${entry.filename} — introuvable`, false);
+        log(`Manquant : ${entry.filename}`, "error");
+      } else {
+        renderBundleItem(addrHex, `${entry.filename} — optionnel absent`, true);
+        log(`Optionnel absent : ${entry.filename}`, "info");
+      }
       continue;
     }
 
     const zf = zip.file(path);
     const uint8 = await zf.async("uint8array");
+    files[entry.key].data = await uint8ArrayToBinaryString(uint8);
 
-    files[m.key].data = await uint8ArrayToBinaryString(uint8);
-    renderBundleItem(addrHex, `${m.expected} ← ${path}`, true, `(${(uint8.length / 1024).toFixed(1)} KB)`);
-    log(`OK: ${m.expected} trouvé via ${path}`, "success");
+    renderBundleItem(addrHex, `${entry.filename} ← ${path}`, true, `(${(uint8.length / 1024).toFixed(1)} KB)`);
+    log(`Chargé [${addrHex}] : ${entry.filename} (source: ${path})`, "success");
   }
 
   if (!allOk) {
-    throw new Error("Bundle incomplet: noms requis non trouvés.");
+    throw new Error("Bundle incomplet : fichiers requis manquants.");
   }
 
   loadedBundleFileName = displayName;
@@ -273,7 +259,6 @@ async function parseZipArrayBuffer(arrayBuffer, displayName) {
   setStep("Flash", "active");
   updateFlashBtn();
 }
-// ===========================================================
 
 async function autoLoadSelectedFirmwareZip() {
   const entry = getSelectedVersionEntry();
@@ -369,7 +354,6 @@ softwareVersionSelect.addEventListener("change", async () => {
   setSelectedBundleInfo(`Version choisie : ${entry.label}`);
   log(`Type/version : ${TYPE_LABELS[selectedSoftwareType]} / ${entry.label}`, "info");
 
-  // Auto-download + auto-parse du zip
   await autoLoadSelectedFirmwareZip();
 });
 
@@ -466,7 +450,7 @@ disconnectBtn.addEventListener("click", async () => {
 
 // ── Flash
 flashBtn.addEventListener("click", async () => {
-  if (!espLoader || !allFilesLoaded()) return;
+  if (!espLoader || !allRequiredFilesLoaded()) return;
 
   flashBtn.disabled = true;
   connectBtn.disabled = true;
@@ -480,10 +464,12 @@ flashBtn.addEventListener("click", async () => {
   try {
     await espLoader.flashId();
 
-    const fileArray = Object.values(files).map((f) => ({
-      data: f.data,
-      address: f.address,
-    }));
+    const fileArray = BUNDLE_FILES
+      .filter((entry) => files[entry.key].data !== null)
+      .map((entry) => ({
+        data: files[entry.key].data,
+        address: entry.address,
+      }));
 
     await espLoader.writeFlash({
       fileArray,
@@ -495,7 +481,7 @@ flashBtn.addEventListener("click", async () => {
       reportProgress: (fileIndex, written, total) => {
         const pct = Math.round((written / total) * 100);
         progressBar.style.width = pct + "%";
-        const names = ["Bootloader", "Partitions", "Firmware"];
+        const names = ["Bootloader", "Partitions", "BootApp0", "Firmware"];
         if (pct % 20 === 0) log(names[fileIndex] + " : " + pct + "%", "info");
       },
       calculateMD5Hash: undefined,
