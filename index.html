@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SimuZ Firmware Update Tool</title>
   <meta name="description" content="Outil web de flash firmware ESP32 pour SimuZ" />
+
   <link rel="stylesheet" href="style.css" />
+
+  <!-- JSZip (global JSZip utilisé dans app.js) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+
+  <!-- Ton app -->
   <script type="module" src="app.js" defer></script>
 </head>
 <body>
@@ -15,11 +20,16 @@
   <main class="container">
     <header>
       <div class="logo">
-        <span>⚡</span>
+        <span>
+          <!-- icône simple -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/>
+          </svg>
+        </span>
         <h1>SimuZ Firmware Update Tool</h1>
       </div>
       <p class="subtitle">
-        Connecte ton ESP32, choisis ton bundle firmware, puis lance le flash en un clic.
+        Connecte ton ESP32, charge un bundle firmware, puis lance le flash.
       </p>
     </header>
 
