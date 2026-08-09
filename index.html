@@ -8,18 +8,10 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- JSZip (utilisé dans app.js via global JSZip) -->
+  <!-- JSZip (global) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-  <!-- Polyfill Buffer (corrige: 'Buffer is not defined' au moment du stub upload) -->
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-  <script>
-    if (typeof window !== "undefined" && typeof window.Buffer === "undefined" && window.buffer?.Buffer) {
-      window.Buffer = window.buffer.Buffer;
-    }
-  </script>
-
-  <!-- Ton app -->
+  <!-- App module -->
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -41,21 +33,18 @@
     </header>
 
     <section class="steps">
-      <!-- STEP 1 -->
       <article id="stepConnect" class="step active">
         <div class="step-header">
           <div class="step-number">1</div>
           <h2>Connexion ESP32</h2>
           <div id="statusBadge" class="status-badge disconnected">⚪ Non connecté</div>
         </div>
-
         <div class="actions-row">
           <button id="connectBtn" class="btn btn-primary" type="button">Connecter</button>
           <button id="disconnectBtn" class="btn btn-danger" type="button" disabled>Déconnecter</button>
         </div>
       </article>
 
-      <!-- STEP 2 -->
       <article id="stepFile" class="step">
         <div class="step-header">
           <div class="step-number">2</div>
@@ -90,17 +79,14 @@
         <div id="bundleStatus" class="bundle-status"></div>
       </article>
 
-      <!-- STEP 3 -->
       <article id="stepFlash" class="step">
         <div class="step-header">
           <div class="step-number">3</div>
           <h2>Flash firmware</h2>
         </div>
-
         <div class="actions-row">
           <button id="flashBtn" class="btn btn-success" type="button" disabled>Flasher</button>
         </div>
-
         <div id="progressWrap" class="progress-wrap">
           <div id="progressBar" class="progress-bar"></div>
         </div>
@@ -108,10 +94,7 @@
     </section>
 
     <pre id="logBox" class="log-box"></pre>
-
-    <footer class="footer">
-      SimuZ • ESP32 Web Flasher
-    </footer>
+    <footer class="footer">SimuZ • ESP32 Web Flasher</footer>
   </main>
 </body>
 </html>
