@@ -1,10 +1,9 @@
 import { Buffer } from "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm";
 import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.4.3/bundle.js";
 
-// Fix robuste pour navigateur: esptool-js attend parfois Buffer en global
-if (typeof globalThis.Buffer === "undefined") {
-  globalThis.Buffer = Buffer;
-}
+// Fix robuste Buffer pour esptool-js
+if (typeof globalThis.Buffer === "undefined") globalThis.Buffer = Buffer;
+if (typeof window !== "undefined" && typeof window.Buffer === "undefined") window.Buffer = Buffer;
 
 let device = null;
 let transport = null;
@@ -16,6 +15,7 @@ const REPO = window.SIMUZ_REPO || {
   branch: "main",
 };
 
+// Mapping type -> dossier
 const TYPE_TO_FOLDER = {
   formula: "firmware/1-formula",
   simple_emulator: "firmware/2-simple-emulator",
@@ -46,7 +46,7 @@ const files = {
 const BUNDLE_FILES = [
   { key: "bootloader", filename: "bootloader.bin", address: 0x1000, required: true },
   { key: "partitions", filename: "partitions.bin", address: 0x8000, required: true },
-  { key: "boot_app0", filename: "boot_app0.bin", address: 0xE000, required: false },
+  { key: "boot_app0", filename: "boot_app0.bin", address: 0xE000, required: false }, // optionnel
   { key: "firmware", filename: "firmware.bin", address: 0x10000, required: true },
 ];
 
@@ -66,6 +66,7 @@ const fileBundleInput = document.getElementById("fileBundle");
 const selectedBundleNameEl = document.getElementById("selectedBundleName");
 const bundleStatusEl = document.getElementById("bundleStatus");
 
+// État initial UI
 versionRow.style.display = "";
 customZipPicker.style.display = "none";
 
@@ -368,6 +369,7 @@ fileBundleInput.addEventListener("change", async (e) => {
     e.target.value = "";
     return;
   }
+
   if (selectedSoftwareType !== "custom") {
     log("Le chargement manuel du .zip est réservé au type 5 (Custom).", "error");
     e.target.value = "";
@@ -385,6 +387,7 @@ fileBundleInput.addEventListener("change", async (e) => {
   }
 });
 
+// Connect
 connectBtn.addEventListener("click", async () => {
   if (!("serial" in navigator)) {
     log("Web Serial API non supportée. Utilise Chrome ou Edge.", "error");
@@ -424,6 +427,7 @@ connectBtn.addEventListener("click", async () => {
   }
 });
 
+// Disconnect
 disconnectBtn.addEventListener("click", async () => {
   try {
     if (transport) await transport.disconnect();
@@ -446,6 +450,7 @@ disconnectBtn.addEventListener("click", async () => {
   log("Déconnecté.", "info");
 });
 
+// Flash
 flashBtn.addEventListener("click", async () => {
   if (!espLoader || !allRequiredFilesLoaded()) return;
 
