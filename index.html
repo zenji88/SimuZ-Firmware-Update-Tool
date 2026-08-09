@@ -8,11 +8,19 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- JSZip (global JSZip utilisé dans app.js) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <!-- JSZip (utilisé dans app.js via global JSZip) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <!-- Polyfill Buffer (corrige: 'Buffer is not defined' au moment du stub upload) -->
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>
+    if (typeof window !== "undefined" && typeof window.Buffer === "undefined" && window.buffer?.Buffer) {
+      window.Buffer = window.buffer.Buffer;
+    }
+  </script>
 
   <!-- Ton app -->
-  <script type="module" src="app.js" defer></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
   <div class="page-noise" aria-hidden="true"></div>
@@ -20,9 +28,8 @@
   <main class="container">
     <header>
       <div class="logo">
-        <span>
-          <!-- icône simple -->
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <span aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/>
           </svg>
         </span>
