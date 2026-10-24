@@ -3,10 +3,10 @@
   /* Colors */
   --bg:#0d0f14;
   --bg-glow:rgba(10,132,255,.08);
-  --surface:rgba(30,33,41,.8);
-  --surface-2:rgba(40,44,54,.8);
-  --surface-3:rgba(58,63,76,.8);
-  --field:rgba(18,20,26,.8);
+  --surface:rgba(30,33,41,var(--glass-alpha));
+  --surface-2:rgba(40,44,54,var(--glass-alpha));
+  --surface-3:rgba(58,63,76,var(--glass-alpha));
+  --field:rgba(18,20,26,var(--glass-alpha));
   --border:rgba(255,255,255,.08);
   --border-strong:rgba(255,255,255,.14);
   --highlight:inset 0 1px 0 rgba(255,255,255,.06);
@@ -20,6 +20,9 @@
   --ok-soft:rgba(50,215,75,.13);
   --error:#ff6961;
   --error-soft:rgba(255,105,97,.13);
+  --glass-alpha:.8;
+  --overlay:rgba(6,10,18,.55);
+  color-scheme:dark;
   --blur:blur(14px) saturate(130%);
   --on-accent:#fff;
 
@@ -59,14 +62,44 @@
   --dur-slow:240ms;
 }
 
+[data-theme="light"]{
+  --overlay:rgba(245,247,252,.45);
+  color-scheme:light;
+  --bg:#f5f5f7;
+  --bg-glow:rgba(0,113,227,.05);
+  --surface:rgba(255,255,255,var(--glass-alpha));
+  --surface-2:rgba(245,245,247,var(--glass-alpha));
+  --surface-3:rgba(235,235,239,var(--glass-alpha));
+  --field:rgba(255,255,255,var(--glass-alpha));
+  --highlight:inset 0 1px 0 rgba(255,255,255,.7);
+  --text-tertiary:#8e8e93;
+  --border:rgba(0,0,0,.08);
+  --border-strong:rgba(0,0,0,.16);
+  --text:#1d1d1f;
+  --muted:#6e6e73;
+  --accent:#0071e3;
+  --accent-hover:#0077ed;
+  --accent-soft:rgba(0,113,227,.1);
+  --ok:#1f8a3b;
+  --ok-soft:rgba(31,138,59,.1);
+  --error:#d70015;
+  --error-soft:rgba(215,0,21,.08);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 8px 24px rgba(0,0,0,.08);
+  --shadow-lg:0 24px 64px rgba(0,0,0,.1);
+  --ring:0 0 0 3px rgba(0,113,227,.3);
+}
+
 @media (prefers-color-scheme: light){
-  :root{
+  :root:not([data-theme]){
+    --overlay:rgba(245,247,252,.45);
+    color-scheme:light;
     --bg:#f5f5f7;
     --bg-glow:rgba(0,113,227,.05);
-    --surface:rgba(255,255,255,.8);
-    --surface-2:rgba(245,245,247,.8);
-    --surface-3:rgba(235,235,239,.8);
-    --field:rgba(255,255,255,.8);
+    --surface:rgba(255,255,255,var(--glass-alpha));
+    --surface-2:rgba(245,245,247,var(--glass-alpha));
+    --surface-3:rgba(235,235,239,var(--glass-alpha));
+    --field:rgba(255,255,255,var(--glass-alpha));
     --highlight:inset 0 1px 0 rgba(255,255,255,.7);
     --text-tertiary:#8e8e93;
     --border:rgba(0,0,0,.08);
@@ -97,7 +130,7 @@ body{
   color:var(--text);
   background:
     radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%),
-    linear-gradient(rgba(6,10,18,.55), rgba(6,10,18,.55)),
+    linear-gradient(var(--overlay), var(--overlay)),
     url("Track.jpg") center / cover no-repeat,
     linear-gradient(160deg, #0b0d12 0%, #11182a 55%, #0b0d12 100%);
   background-color:var(--bg);
@@ -281,3 +314,20 @@ input[type="file"]::file-selector-button:hover{background:var(--surface-2)}
 @media (prefers-reduced-motion: reduce){
   *{animation:none!important;transition:none!important}
 }
+
+/* ---------- Appearance panel ---------- */
+.appearance{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--s-2);
+  margin-bottom:var(--s-2);font-size:var(--fs-xs);color:var(--muted);
+}
+.appearance-group{display:flex;align-items:center;gap:var(--s-1);border:0;margin:0;padding:0}
+.appearance-label{font-size:var(--fs-xs);color:var(--muted)}
+.theme-seg{display:inline-flex;padding:2px;border-radius:var(--radius-pill);background:var(--field);border:1px solid var(--border)}
+.theme-seg input{position:absolute;opacity:0;width:1px;height:1px}
+.theme-seg label{padding:4px 12px;border-radius:var(--radius-pill);cursor:pointer;color:var(--muted);transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.theme-seg input:checked + label{background:var(--accent);color:var(--on-accent)}
+.theme-seg input:focus-visible + label{outline:2px solid var(--accent);outline-offset:2px;box-shadow:var(--ring)}
+.appearance input[type="range"]{width:110px;accent-color:var(--accent)}
+.appearance input[type="range"]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.appearance output{min-width:3ch;font-variant-numeric:tabular-nums;color:var(--text)}
+body,.container,.step{transition:background-color var(--dur) var(--ease),color var(--dur) var(--ease)}
