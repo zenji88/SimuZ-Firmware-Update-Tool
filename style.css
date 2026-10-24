@@ -95,7 +95,13 @@ body{
   font-family:var(--font);
   font-size:var(--fs-md);
   color:var(--text);
-  background:radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%) var(--bg) no-repeat fixed;
+  background:
+    radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%),
+    linear-gradient(rgba(6,10,18,.55), rgba(6,10,18,.55)),
+    url("Track.jpg") center / cover no-repeat,
+    linear-gradient(160deg, #0b0d12 0%, #11182a 55%, #0b0d12 100%);
+  background-color:var(--bg);
+  background-attachment:fixed;
   line-height:1.55;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
